@@ -1,14 +1,32 @@
-#!/bin/bash
+#!/bin/sh
+set -e
 
-service mysql start
+# 📁 Vérifie que les dossiers nécessaires existent
+mkdir -p /run/mysqld
+chown -R mysql:mysql /run/mysqld
+chown -R mysql:mysql /var/lib/mysql
 
-echo "CREATE DATABASE IF NOT EXISTS $db1_name;" > db.sql
-echo "CREATE USER IF NOT EXISTS '$db1_user'@'%' IDENTIFIED BY '$db1_password';" >> db.sql
-echo "GRANT ALL PRIVILEGES ON $db1_name.* TO '$db1_user'@'%';" >> db.sql
-echo "FLUSH PRIVILEGES;" >> db.sql
+# 🧩 Initialise la base si elle n'existe pas encore
+if [ ! -d "/var/lib/mysql/mysql" ]; then
+    echo "🧱 Initialisation de la base de données..."
+    mysql_install_db --user=mysql --ldata=/var/lib/mysql > /dev/null
 
-mysql -u root --password="$db_root_password" < db.sql
-rm -rf db.sql
+    # Démarrage temporaire de mysqld pour créer l'utilisateur et la base
+    mysqld_safe --skip-networking &
+    sleep 5
 
-kill -SIGINT $(pidof mysqld)
-mysqld
+    echo "🔧 Configuration initiale de MariaDB..."
+    mysql -u root <<EOSQL
+CREATE DATABASE IF NOT EXISTS ${MYSQL_DATABASE};
+CREATE USER IF NOT EXISTS '${MYSQL_USER}'@'%' IDENTIFIED BY '${MYSQL_PASSWORD}';
+GRANT ALL PRIVILEGES ON ${MYSQL_DATABASE}.* TO '${MYSQL_USER}'@'%';
+FLUSH PRIVILEGES;
+EOSQL
+
+    echo "🧹 Arrêt du serveur temporaire..."
+    mysqladmin -u root -p${MYSQL_ROOT_PASSWORD} shutdown || true
+fi
+
+# 🚀 Démarre le vrai serveur MariaDB au premier plan
+echo "✅ Lancement final de MariaDB..."
+exec mysqld_safe

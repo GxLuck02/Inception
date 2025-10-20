@@ -6,7 +6,7 @@
 #    By: ttreichl <ttreichl@student.42lausanne.c    +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2025/10/07 16:59:34 by ttreichl          #+#    #+#              #
-#    Updated: 2025/10/07 19:46:46 by ttreichl         ###   ########.fr        #
+#    Updated: 2025/10/20 16:55:42 by ttreichl         ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -17,5 +17,6 @@ RUN apt-get update -y && apt-get upgrade -y &&  apt-get install mariadb-server -
 COPY ./tools/50-server.cnf /etc/mysql/mariadb.conf.d/50-server.cnf
 
 COPY ./tools/start.sh /
+RUN chmod +x /start.sh
 
-CMD [ "/start.sh" ]
+CMD ["/start.sh"]

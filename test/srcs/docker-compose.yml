@@ -11,6 +11,8 @@ services:
     networks:
       - InceptionNet
     restart: always
+    env_file:
+      - .env
     
   wordpress:
     container_name: wordpress
@@ -23,6 +25,8 @@ services:
     env_file:
       - .env
     restart: always
+    volumes:
+      - wordpress_data:/var/www/html
 
   mariadb:
     container_name: mariadb
@@ -33,12 +37,23 @@ services:
     env_file:
       - .env
     restart: always
-
+    volumes:
+      - mariadb_data:/var/lib/mysql
 
 volumes:
-  wordpress:
+  wordpress_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /home/gxluck/data/wordpress
 
-  mariadb:
+  mariadb_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /home/gxluck/data/mariadb
 
 
 networks:
