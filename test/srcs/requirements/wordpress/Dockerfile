@@ -6,7 +6,7 @@
 #    By: ttreichl <ttreichl@student.42lausanne.c    +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2025/10/17 14:52:46 by ttreichl          #+#    #+#              #
-#    Updated: 2025/10/17 19:25:58 by ttreichl         ###   ########.fr        #
+#    Updated: 2025/10/21 15:54:08 by ttreichl         ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -23,6 +23,7 @@ RUN apt-get update && apt-get install -y \
     wget \
     unzip \
     curl \
+    mariadb-client \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /var/www/html

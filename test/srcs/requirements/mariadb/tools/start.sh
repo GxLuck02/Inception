@@ -1,5 +1,6 @@
 #!/bin/sh
 set -e
+export MYSQL_DATABASE MYSQL_USER MYSQL_PASSWORD MYSQL_ROOT_PASSWORD
 
 # 📁 Vérifie que les dossiers nécessaires existent
 mkdir -p /run/mysqld
@@ -16,15 +17,15 @@ if [ ! -d "/var/lib/mysql/mysql" ]; then
     sleep 5
 
     echo "🔧 Configuration initiale de MariaDB..."
-    mysql -u root <<EOSQL
-CREATE DATABASE IF NOT EXISTS ${MYSQL_DATABASE};
-CREATE USER IF NOT EXISTS '${MYSQL_USER}'@'%' IDENTIFIED BY '${MYSQL_PASSWORD}';
-GRANT ALL PRIVILEGES ON ${MYSQL_DATABASE}.* TO '${MYSQL_USER}'@'%';
+    mysql -u root <<-EOSQL
+CREATE USER '$MYSQL_USER'@'%' IDENTIFIED BY '$MYSQL_PASSWORD';
+GRANT ALL PRIVILEGES ON $MYSQL_DATABASE.* TO '$MYSQL_USER'@'%';
 FLUSH PRIVILEGES;
 EOSQL
 
+
     echo "🧹 Arrêt du serveur temporaire..."
-    mysqladmin -u root -p${MYSQL_ROOT_PASSWORD} shutdown || true
+    mysqladmin -u root -p$MYSQL_ROOT_PASSWORD shutdown || true
 fi
 
 # 🚀 Démarre le vrai serveur MariaDB au premier plan
