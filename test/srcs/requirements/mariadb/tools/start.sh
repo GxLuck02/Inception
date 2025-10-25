@@ -1,33 +1,50 @@
-#!/bin/sh
+#!/bin/bash
 set -e
-export MYSQL_DATABASE MYSQL_USER MYSQL_PASSWORD MYSQL_ROOT_PASSWORD
 
-# 📁 Vérifie que les dossiers nécessaires existent
+echo "🚀 Initialisation de MariaDB..."
+
+# 1️⃣ Chemin du volume monté dans le conteneur
+DATA_DIR="/var/lib/mysql"
+
+# 2️⃣ Préparer les répertoires
 mkdir -p /run/mysqld
-chown -R mysql:mysql /run/mysqld
-chown -R mysql:mysql /var/lib/mysql
+chown -R mysql:mysql /run/mysqld "$DATA_DIR"
 
-# 🧩 Initialise la base si elle n'existe pas encore
-if [ ! -d "/var/lib/mysql/mysql" ]; then
-    echo "🧱 Initialisation de la base de données..."
-    mysql_install_db --user=mysql --ldata=/var/lib/mysql > /dev/null
+# 3️⃣ Vérifier si MariaDB est déjà initialisé
+# On vérifie la présence du fichier système 'user.frm' qui existe seulement si MariaDB est initialisée
+if [ ! -f "$DATA_DIR/mysql/user.frm" ]; then
+    echo "🧱 Première initialisation de MariaDB..."
 
-    # Démarrage temporaire de mysqld pour créer l'utilisateur et la base
-    mysqld_safe --skip-networking &
+    # 4️⃣ Initialisation du système MariaDB
+    mariadb-install-db --user=mysql --ldata="$DATA_DIR" > /dev/null
+
+    # 5️⃣ Démarrage temporaire avec skip-grant-tables
+    echo "⏳ Démarrage temporaire de MariaDB pour configuration initiale..."
+    mysqld_safe --skip-networking --skip-grant-tables &
+    pid="$!"
     sleep 5
 
-    echo "🔧 Configuration initiale de MariaDB..."
-    mysql -u root <<-EOSQL
-CREATE USER '$MYSQL_USER'@'%' IDENTIFIED BY '$MYSQL_PASSWORD';
-GRANT ALL PRIVILEGES ON $MYSQL_DATABASE.* TO '$MYSQL_USER'@'%';
+    # 6️⃣ Script SQL de configuration
+    cat <<EOF > /tmp/init.sql
+CREATE DATABASE IF NOT EXISTS \`${MYSQL_DATABASE}\`;
+CREATE USER IF NOT EXISTS '${MYSQL_USER}'@'%' IDENTIFIED BY '${MYSQL_PASSWORD}';
+GRANT ALL PRIVILEGES ON \`${MYSQL_DATABASE}\`.* TO '${MYSQL_USER}'@'%';
+ALTER USER 'root'@'localhost' IDENTIFIED BY '${MYSQL_ROOT_PASSWORD}';
 FLUSH PRIVILEGES;
-EOSQL
+EOF
 
+    # 7️⃣ Exécution du SQL
+    echo "⚙️ Application de la configuration initiale..."
+    mysql < /tmp/init.sql
 
-    echo "🧹 Arrêt du serveur temporaire..."
-    mysqladmin -u root -p$MYSQL_ROOT_PASSWORD shutdown || true
+    # 8️⃣ Arrêt du serveur temporaire
+    echo "🛑 Arrêt du serveur temporaire..."
+    kill "$pid"
+    wait "$pid" 2>/dev/null || true
 fi
 
-# 🚀 Démarre le vrai serveur MariaDB au premier plan
-echo "✅ Lancement final de MariaDB..."
+# 9️⃣ Lancement final de MariaDB
+echo "🚀 Lancement final de MariaDB..."
 exec mysqld_safe
+
+

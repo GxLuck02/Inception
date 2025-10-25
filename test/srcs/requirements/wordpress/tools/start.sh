@@ -1,14 +1,33 @@
 #!/bin/bash
-
-export MYSQL_DATABASE MYSQL_USER MYSQL_PASSWORD MYSQL_ROOT_PASSWORD
-export db_name db_user db_pwd
-export DOMAIN_NAME WP_TITLE WP_ADMIN_USR WP_ADMIN_PWD WP_ADMIN_EMAIL WP_USR WP_PWD WP_EMAIL
-
 set -e
+set -o pipefail
 
-cd /var/www/html
+# -------------------------
+# Variables d’environnement
+# -------------------------
+: "${DB_NAME:?Need to set DB_NAME}"
+: "${DB_USER:?Need to set DB_USER}"
+: "${DB_PWD:?Need to set DB_PWD}"
+: "${DOMAIN_NAME:?Need to set DOMAIN_NAME}"
+: "${WP_TITLE:=My WordPress Site}"
+: "${WP_ADMIN_USR:=admin}"
+: "${WP_ADMIN_PWD:=admin123}"
+: "${WP_ADMIN_EMAIL:=admin@example.com}"
+: "${WP_USR:=author}"
+: "${WP_EMAIL:=author@example.com}"
 
-# Installer WP-CLI si non présent
+WP_PATH="/var/www/html"
+
+# -------------------------
+# Préparer le volume
+# -------------------------
+mkdir -p "$WP_PATH"
+chown -R www-data:www-data "$WP_PATH"
+cd "$WP_PATH"
+
+# -------------------------
+# Installer WP-CLI si nécessaire
+# -------------------------
 if [ ! -f /usr/local/bin/wp ]; then
     echo "📦 Installation de WP-CLI..."
     curl -sO https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar
@@ -16,27 +35,35 @@ if [ ! -f /usr/local/bin/wp ]; then
     mv wp-cli.phar /usr/local/bin/wp
 fi
 
-# Si WordPress n’est pas encore installé
-if [ ! -f /var/www/html/wp-config.php ]; then
+# -------------------------
+# Attendre MariaDB
+# -------------------------
+echo "⏳ Attente de MariaDB..."
+until mysqladmin ping -h mariadb -u"$DB_USER" -p"$DB_PWD" --silent; do
+    echo "MariaDB non prête, attente 2s..."
+    sleep 2
+done
+
+# -------------------------
+# Installer WordPress si nécessaire
+# -------------------------
+if [ ! -f "$WP_PATH/wp-config.php" ]; then
     echo "📥 Téléchargement de WordPress..."
-    rm -rf ./*
+    rm -rf "$WP_PATH"/*
     wp core download --allow-root
 
-    echo "⏳ Attente que MariaDB soit prêt..."
-    until mysqladmin ping -h mariadb -u"$db_user" -p"$db_pwd" --silent; do
-    sleep 2
-    done
-    echo "⚙️ Configuration de WordPress..."
+    echo "⚙️ Création du fichier wp-config.php..."
     wp config create \
-        --dbname="$db_name" \
-        --dbuser="$db_user" \
-        --dbpass="$db_pwd" \
+        --dbname="$DB_NAME" \
+        --dbuser="$DB_USER" \
+        --dbpass="$DB_PWD" \
         --dbhost="mariadb" \
-        --allow-root
+        --allow-root \
+        --skip-check
 
     echo "🧱 Installation de WordPress..."
     wp core install \
-        --url="$DOMAIN_NAME" \
+        --url="http://$DOMAIN_NAME" \
         --title="$WP_TITLE" \
         --admin_user="$WP_ADMIN_USR" \
         --admin_password="$WP_ADMIN_PWD" \
@@ -56,9 +83,14 @@ if [ ! -f /var/www/html/wp-config.php ]; then
     echo "🔌 Activation du plugin Redis..."
     wp plugin install redis-cache --activate --allow-root
 
-    echo "⬆️ Mise à jour des plugins..."
+    echo "⬆️ Mise à jour de tous les plugins..."
     wp plugin update --all --allow-root
+else
+    echo "✅ WordPress déjà installé, passage à l’exécution..."
 fi
 
+# -------------------------
+# Lancer Apache en avant-plan
+# -------------------------
 echo "🚀 Lancement d’Apache..."
 exec apachectl -D FOREGROUND

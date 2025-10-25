@@ -20,10 +20,13 @@ basedir                 = /usr
 datadir                 = /var/lib/mysql
 tmpdir                  = /tmp
 lc-messages-dir         = /usr/share/mysql
+bind-address            = 0.0.0.0
+character-set-server    = utf8mb4
+collation-server        = utf8mb4_general_ci
 
 # Broken reverse DNS slows down connections considerably and name resolve is
 # safe to skip if there are no "host by domain name" access grants
-skip-name-resolve
+# skip-name-resolve
 
 # Instead of skip-networking the default is now to listen only on
 # localhost which is more compatible and is not less secure.

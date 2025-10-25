@@ -1,35 +1,63 @@
 #!/bin/bash
+set -e
+
+# --- Vérifier les variables d'environnement ---
+: "${DOMAIN_NAME:?Vous devez définir DOMAIN_NAME}"
+: "${CERTS_:?Vous devez définir CERTS_}"
+
+# --- Créer les dossiers SSL si nécessaire ---
+mkdir -p /etc/ssl/certs /etc/ssl/private
+chmod 700 /etc/ssl/private
+
+# --- Générer le certificat SSL si absent ---
+if [ ! -f "$CERTS_" ]; then
+    echo "🔐 Génération du certificat SSL auto-signé..."
+    openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+        -keyout /etc/ssl/private/nginx-selfsigned.key \
+        -out "$CERTS_" \
+        -subj "/C=MO/L=KH/O=1337/OU=student/CN=$DOMAIN_NAME"
+fi
+
+# --- Préparer le répertoire web ---
+mkdir -p /var/www/html
+chown -R www-data:www-data /var/www/html
+chmod -R 755 /var/www/html
 
 
-
-
-openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout /etc/ssl/private/nginx-selfsigned.key -out $CERTS_ -subj "/C=MO/L=KH/O=1337/OU=student/CN=sahafid.42.ma"
-
-
-echo "
+# --- Écrire la configuration Nginx dynamique ---
+cat > /etc/nginx/sites-available/default <<EOF
 server {
     listen 443 ssl;
     listen [::]:443 ssl;
 
-    #server_name www.$DOMAIN_NAME $DOMAIN_NAME;
+    server_name $DOMAIN_NAME;
 
     ssl_certificate $CERTS_;
-    ssl_certificate_key /etc/ssl/private/nginx-selfsigned.key;" > /etc/nginx/sites-available/default
+    ssl_certificate_key /etc/ssl/private/nginx-selfsigned.key;
 
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_ciphers 'HIGH:!aNULL:!MD5';
+    ssl_prefer_server_ciphers on;
+    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
 
-echo '
-    ssl_protocols TLSv1.3;
-
-    index index.php;
     root /var/www/html;
 
-    location ~ [^/]\.php(/|$) { 
-            try_files $uri =404;
-            fastcgi_pass wordpress:9000;
-            include fastcgi_params;
-            fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
-        }
-} ' >>  /etc/nginx/sites-available/default
+    location / {
+        proxy_pass http://wordpress:80;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+    }
+
+}
+EOF
 
 
-nginx -g "daemon off;"
+# --- Afficher la conf générée pour debug ---
+echo "📝 Configuration Nginx générée :"
+cat /etc/nginx/sites-available/default
+
+# --- Démarrer Nginx au premier plan ---
+echo "🚀 Démarrage de Nginx..."
+exec nginx -g "daemon off;"
