@@ -3,48 +3,38 @@ set -e
 
 echo "🚀 Initialisation de MariaDB..."
 
-# 1️⃣ Chemin du volume monté dans le conteneur
 DATA_DIR="/var/lib/mysql"
-
-# 2️⃣ Préparer les répertoires
 mkdir -p /run/mysqld
 chown -R mysql:mysql /run/mysqld "$DATA_DIR"
 
-# 3️⃣ Vérifier si MariaDB est déjà initialisé
-# On vérifie la présence du fichier système 'user.frm' qui existe seulement si MariaDB est initialisée
-if [ ! -f "$DATA_DIR/mysql/user.frm" ]; then
-    echo "🧱 Première initialisation de MariaDB..."
+# Démarrer MariaDB en arrière-plan normalement
+mysqld_safe &
+PID="$!"
 
-    # 4️⃣ Initialisation du système MariaDB
-    mariadb-install-db --user=mysql --ldata="$DATA_DIR" > /dev/null
+# Attendre que MariaDB soit prêt
+echo "⏳ Attente que MariaDB démarre..."
+until mysqladmin ping -uroot -p"$MYSQL_ROOT_PASSWORD" --silent; do
+    sleep 2
+done
 
-    # 5️⃣ Démarrage temporaire avec skip-grant-tables
-    echo "⏳ Démarrage temporaire de MariaDB pour configuration initiale..."
-    mysqld_safe --skip-networking --skip-grant-tables &
-    pid="$!"
-    sleep 5
+# Vérifier si l'utilisateur wpuser existe
+USER_EXISTS=$(mysql -uroot -p"$MYSQL_ROOT_PASSWORD" -sse \
+"SELECT EXISTS(SELECT 1 FROM mysql.user WHERE User='${MYSQL_USER}');")
 
-    # 6️⃣ Script SQL de configuration
-    cat <<EOF > /tmp/init.sql
-CREATE DATABASE IF NOT EXISTS \`${MYSQL_DATABASE}\`;
-CREATE USER IF NOT EXISTS '${MYSQL_USER}'@'%' IDENTIFIED BY '${MYSQL_PASSWORD}';
-GRANT ALL PRIVILEGES ON \`${MYSQL_DATABASE}\`.* TO '${MYSQL_USER}'@'%';
-ALTER USER 'root'@'localhost' IDENTIFIED BY '${MYSQL_ROOT_PASSWORD}';
-FLUSH PRIVILEGES;
-EOF
-
-    # 7️⃣ Exécution du SQL
-    echo "⚙️ Application de la configuration initiale..."
-    mysql < /tmp/init.sql
-
-    # 8️⃣ Arrêt du serveur temporaire
-    echo "🛑 Arrêt du serveur temporaire..."
-    kill "$pid"
-    wait "$pid" 2>/dev/null || true
+if [ "$USER_EXISTS" -eq 0 ]; then
+    echo "🧱 Création de l'utilisateur ${MYSQL_USER} et de la base ${MYSQL_DATABASE}..."
+    mysql -uroot -p"$MYSQL_ROOT_PASSWORD" -e "CREATE DATABASE IF NOT EXISTS \`${MYSQL_DATABASE}\`;"
+    mysql -uroot -p"$MYSQL_ROOT_PASSWORD" -e "CREATE USER '${MYSQL_USER}'@'%' IDENTIFIED BY '${MYSQL_PASSWORD}';"
+    mysql -uroot -p"$MYSQL_ROOT_PASSWORD" -e "GRANT ALL PRIVILEGES ON \`${MYSQL_DATABASE}\`.* TO '${MYSQL_USER}'@'%';"
+    mysql -uroot -p"$MYSQL_ROOT_PASSWORD" -e "FLUSH PRIVILEGES;"
+else
+    echo "✅ Utilisateur ${MYSQL_USER} déjà existant, rien à faire."
 fi
 
-# 9️⃣ Lancement final de MariaDB
+# Arrêter le serveur temporaire
+kill "$PID"
+wait "$PID" 2>/dev/null || true
+
+# Lancer MariaDB normalement
 echo "🚀 Lancement final de MariaDB..."
 exec mysqld_safe
-
-

@@ -2,20 +2,6 @@
 set -e
 set -o pipefail
 
-# -------------------------
-# Variables d’environnement
-# -------------------------
-: "${DB_NAME:?Need to set DB_NAME}"
-: "${DB_USER:?Need to set DB_USER}"
-: "${DB_PWD:?Need to set DB_PWD}"
-: "${DOMAIN_NAME:?Need to set DOMAIN_NAME}"
-: "${WP_TITLE:=My WordPress Site}"
-: "${WP_ADMIN_USR:=admin}"
-: "${WP_ADMIN_PWD:=admin123}"
-: "${WP_ADMIN_EMAIL:=admin@example.com}"
-: "${WP_USR:=author}"
-: "${WP_EMAIL:=author@example.com}"
-
 WP_PATH="/var/www/html"
 
 # -------------------------

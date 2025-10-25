@@ -46,14 +46,14 @@ volumes:
     driver_opts:
       type: none
       o: bind
-      device: /home/gxluck/data/wordpress
+      device: /home/GxLuck/data/wordpress
 
   mariadb_data:
     driver: local
     driver_opts:
       type: none
       o: bind
-      device: /home/gxluck/data/mariadb
+      device: /home/GxLuck/data/mariadb
 
 
 networks:
