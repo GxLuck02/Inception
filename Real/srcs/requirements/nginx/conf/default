@@ -1,6 +1,0 @@
-server {
-	listen 443 ssl;
-	server_name ttreichl.42.fr;
-	server_name www.ttreichl.42.fr;
-	
-}

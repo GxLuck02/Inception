@@ -39,7 +39,7 @@ server {
     ssl_ciphers 'HIGH:!aNULL:!MD5';
     ssl_prefer_server_ciphers on;
     add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
-
+    index index.php index.html ;
     root /var/www/html;
 
     location / {
@@ -51,6 +51,15 @@ server {
     }
 
 }
+
+server {
+    listen 80;
+    server_name ttreichl.42.fr;
+
+    # Redirection permanente vers HTTPS
+    return 301 https://$host$request_uri;
+}
+
 EOF
 
 
