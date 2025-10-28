@@ -26,6 +26,16 @@ chmod -R 755 /var/www/html
 
 # --- Écrire la configuration Nginx dynamique ---
 cat > /etc/nginx/sites-available/default <<EOF
+# Redirection HTTP vers HTTPS
+server {
+    listen 80;
+    listen [::]:80;
+    server_name $DOMAIN_NAME;
+    
+    return 301 https://\$server_name\$request_uri;
+}
+
+# Configuration HTTPS
 server {
     listen 443 ssl;
     listen [::]:443 ssl;
