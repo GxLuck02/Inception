@@ -7,17 +7,18 @@ DATA_DIR="/var/lib/mysql"
 mkdir -p /run/mysqld
 chown -R mysql:mysql /run/mysqld "$DATA_DIR"
 
-# Démarrer MariaDB en arrière-plan normalement
 mysqld_safe &
 PID="$!"
 
-# Attendre que MariaDB soit prêt
 echo "⏳ Attente que MariaDB démarre..."
-until mysqladmin ping -uroot -p"$MYSQL_ROOT_PASSWORD" --silent; do
-    sleep 2
+for i in {30..0}; do
+    if mysqladmin ping -uroot -p"$MYSQL_ROOT_PASSWORD" --silent; then
+        break
+    fi
+    echo "⏳ MariaDB n'est pas encore prêt... ($i)"
+    sleep 1
 done
 
-# Vérifier si l'utilisateur wpuser existe
 USER_EXISTS=$(mysql -uroot -p"$MYSQL_ROOT_PASSWORD" -sse \
 "SELECT EXISTS(SELECT 1 FROM mysql.user WHERE User='${MYSQL_USER}');")
 
@@ -31,10 +32,8 @@ else
     echo "✅ Utilisateur ${MYSQL_USER} déjà existant, rien à faire."
 fi
 
-# Arrêter le serveur temporaire
 kill "$PID"
 wait "$PID" 2>/dev/null || true
 
-# Lancer MariaDB normalement
 echo "🚀 Lancement final de MariaDB..."
 exec mysqld_safe

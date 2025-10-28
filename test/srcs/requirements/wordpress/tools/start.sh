@@ -14,7 +14,6 @@ WP_PATH="/var/www/html"
 DB_HOST="mariadb"
 THEME_NAME="twentytwentyone"
 
-# Vérification de la variable DOMAIN_NAME
 if [ -z "$DOMAIN_NAME" ]; then
     echo -e "${YELLOW}❌ La variable d'environnement DOMAIN_NAME n'est pas définie. Veuillez la définir pour continuer.${RESET}"
     exit 1
@@ -38,7 +37,7 @@ if [ ! -f "$WP_PATH/wp-config.php" ]; then
         --skip-check
 
     echo -e "${YELLOW}🔒 Configuration HTTPS dans wp-config.php...${RESET}"
-    # Ajout AVANT la ligne "That's all, stop editing!"
+    
     sed -i "/That's all, stop editing/i \
 # --- Force HTTPS ---\n\
 if (isset(\$_SERVER['HTTP_X_FORWARDED_PROTO']) && \$_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https') {\n\
@@ -60,7 +59,6 @@ define('WP_SITEURL', 'https://$DOMAIN_NAME');\n\
         --skip-email \
         --allow-root
 
-    # Force HTTPS dans les options
     wp option update home "https://$DOMAIN_NAME" --allow-root
     wp option update siteurl "https://$DOMAIN_NAME" --allow-root
 
@@ -80,7 +78,6 @@ define('WP_SITEURL', 'https://$DOMAIN_NAME');\n\
 
     echo -e "${YELLOW}🎨 Installation et activation du thème $THEME_NAME...${RESET}"
 
-    # Vérifier si le thème est installé
     if ! wp theme is-installed $THEME_NAME --allow-root; then
         echo -e "${YELLOW}📥 Installation du thème $THEME_NAME...${RESET}"
         wp theme install $THEME_NAME --allow-root
@@ -88,7 +85,6 @@ define('WP_SITEURL', 'https://$DOMAIN_NAME');\n\
         echo -e "${YELLOW}Thème $THEME_NAME déjà installé.${RESET}"
     fi
 
-    # Activer le thème
     wp theme activate $THEME_NAME --allow-root
 
     echo -e "${YELLOW}⬆️ Mise à jour de tous les plugins et thèmes...${RESET}"
@@ -103,7 +99,6 @@ define('WP_SITEURL', 'https://$DOMAIN_NAME');\n\
 else
     echo -e "${CYAN}✅ WordPress déjà installé, vérification HTTPS...${RESET}"
     
-    # Force HTTPS même si déjà installé
     wp option update home "https://$DOMAIN_NAME" --allow-root
     wp option update siteurl "https://$DOMAIN_NAME" --allow-root
     

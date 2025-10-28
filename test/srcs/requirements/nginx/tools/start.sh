@@ -1,15 +1,12 @@
 #!/bin/bash
 set -e
 
-# --- Vérifier les variables d'environnement ---
 : "${DOMAIN_NAME:?Vous devez définir DOMAIN_NAME}"
 : "${CERTS_:?Vous devez définir CERTS_}"
 
-# --- Créer les dossiers SSL si nécessaire ---
 mkdir -p /etc/ssl/certs /etc/ssl/private
 chmod 700 /etc/ssl/private
 
-# --- Générer le certificat SSL si absent ---
 if [ ! -f "$CERTS_" ]; then
     echo "🔐 Génération du certificat SSL auto-signé..."
     openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
@@ -18,13 +15,10 @@ if [ ! -f "$CERTS_" ]; then
         -subj "/C=MO/L=KH/O=1337/OU=student/CN=$DOMAIN_NAME"
 fi
 
-# --- Préparer le répertoire web ---
 mkdir -p /var/www/html
 chown -R www-data:www-data /var/www/html
 chmod -R 755 /var/www/html
 
-
-# --- Écrire la configuration Nginx dynamique ---
 cat > /etc/nginx/sites-available/default <<EOF
 # Redirection HTTP vers HTTPS
 server {
@@ -64,11 +58,9 @@ server {
 
 EOF
 
-
-# --- Afficher la conf générée pour debug ---
 echo "📝 Configuration Nginx générée :"
 cat /etc/nginx/sites-available/default
 
-# --- Démarrer Nginx au premier plan ---
+
 echo "🚀 Démarrage de Nginx..."
 exec nginx -g "daemon off;"
