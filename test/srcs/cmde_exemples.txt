@@ -1,0 +1,108 @@
+
+================================================================================
+🗄️ COMMANDES MARIADB
+================================================================================
+
+# Connexion au conteneur MariaDB
+sudo docker exec -it mariadb bash
+sudo docker exec -it mariadb mysql -uroot -proot_pass
+
+# Tests de base de données depuis l'extérieur
+sudo docker exec mariadb mysql -uroot -proot_pass -e "SHOW DATABASES;"
+sudo docker exec mariadb mysql -uroot -proot_pass -e "USE wordpress; SHOW TABLES;"
+
+# Test utilisateur WordPress
+sudo docker exec mariadb mysql -uwpuser -pwppass -e "USE wordpress; SELECT COUNT(*) FROM wp_posts;"
+
+# Vérification des utilisateurs
+sudo docker exec mariadb mysql -uroot -proot_pass -e "SELECT User, Host FROM mysql.user;"
+
+# Test de connectivité depuis WordPress
+sudo docker exec wordpress mysql -h mariadb -uwpuser -pwppass -e "SHOW DATABASES;"
+
+================================================================================
+🌐 COMMANDES NGINX
+================================================================================
+
+# Accès au conteneur NGINX
+sudo docker exec -it nginx bash
+
+# Vérification de la configuration
+sudo docker exec nginx nginx -t
+
+# Test des certificats SSL
+sudo docker exec nginx openssl x509 -in /etc/ssl/certs/nginx-selfsigned.crt -text -noout
+
+================================================================================
+📝 COMMANDES WORDPRESS
+================================================================================
+
+# Accès au conteneur WordPress
+sudo docker exec -it wordpress bash
+
+# Commandes WP-CLI
+sudo docker exec wordpress wp --info --allow-root
+sudo docker exec wordpress wp user list --allow-root
+sudo docker exec wordpress wp post list --allow-root
+sudo docker exec wordpress wp theme list --allow-root
+sudo docker exec wordpress wp plugin list --allow-root
+
+================================================================================
+🔍 COMMANDES DE DIAGNOSTIC
+================================================================================
+
+# État général du système
+sudo docker ps -a
+sudo docker images
+sudo docker volume ls
+sudo docker network ls
+
+# Vérification des ports ouverts
+sudo ss -tlnp | grep :443
+sudo ss -tlnp | grep :80
+
+================================================================================
+🌍 COMMANDES DE TEST WEB
+================================================================================
+
+# Test HTTPS (certificat auto-signé)
+curl -k https://ttreichl.42.fr
+curl -k -I https://ttreichl.42.fr
+
+# Test du certificat SSL
+openssl s_client -connect ttreichl.42.fr:443 -servername ttreichl.42.fr
+
+================================================================================
+🧹 COMMANDES DE NETTOYAGE
+================================================================================
+
+# Nettoyage avant évaluation (OBLIGATOIRE)
+sudo docker stop $(sudo docker ps -qa); sudo docker rm $(sudo docker ps -qa); sudo docker rmi -f $(sudo docker images -qa); sudo docker volume rm $(sudo docker volume ls -q); sudo docker network rm $(sudo docker network ls -q) 2>/dev/null
+
+# Nettoyage des données locales
+sudo rm -rf /home/GxLuck/data/mariadb*
+sudo rm -rf /home/GxLuck/data/wordpress*
+
+# Nettoyage système Docker complet
+sudo docker system prune -af --volumes
+
+================================================================================
+📊 COMMANDES DE MONITORING
+================================================================================
+
+# Utilisation des ressources
+sudo docker stats
+
+# Espace disque des volumes
+sudo du -sh /home/GxLuck/data/*
+
+# Logs en temps réel
+sudo docker logs -f nginx
+sudo docker logs -f wordpress
+sudo docker logs -f mariadb
+
+# Accès root d'urgence
+sudo docker exec -u root -it nginx bash
+sudo docker exec -u root -it wordpress bash
+sudo docker exec -u root -it mariadb bash
+
